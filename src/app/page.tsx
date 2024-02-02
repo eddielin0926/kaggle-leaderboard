@@ -2,20 +2,33 @@
 
 import Leaderboard from "@/components/Leaderboard";
 import Papa, { ParseResult } from "papaparse";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 type Record = {
-  Rank: number;
-  TeamId: number;
+  Rank: string;
+  TeamId: string;
   TeamName: string;
   LastSubmissionDate: string;
-  Score: number;
-  SubmissionCount: number;
+  Score: string;
+  SubmissionCount: string;
   TeamMemberUserNames: string;
 };
 
 export default function Home() {
-  const [data, setData] = useState<number[]>([]);
+  const [data, setData] = useState<number[][]>([]);
+
+  useEffect(() => {
+    // Generate an 2d array of bell curve data
+    const mean = 0.5;
+    const stdDev = 0.1;
+    const numPoints = 100;
+    const step = 1 / numPoints;
+    const data: number[][] = [];
+    for (let i = 0; i < 1; i += step) {
+      data.push([i, 100 * Math.exp(-((i - mean) ** 2) / (2 * stdDev ** 2))]);
+    }
+    setData(data);
+  }, []);
 
   const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
@@ -23,25 +36,39 @@ export default function Home() {
       header: true,
       skipEmptyLines: true,
       complete: (result: ParseResult<Record>) => {
-        const csvValues: number[] = [];
+        const csvValues: string[] = [];
 
         result.data.map((d) => {
-          csvValues.push(Number(d.Score));
+          csvValues.push(d.Score);
         });
 
-        setData(csvValues);
+        // csvalues is string array of numbers. ex ["0.1", "0.2", "0.3", ...]
+        // count the frequency of each score in bin of 0.0001
+        const freq: any = {};
+        csvValues.forEach((e) => {
+          const key = Math.round((Number(e) + Number.EPSILON) * 10000) / 10000;
+          freq[key] = (freq[key] || 0) + 1;
+        });
+
+        // convert the frequency object to 2d array
+        const rst: number[][] = Object.entries(freq).map(([key, value]) => [
+          Number(key),
+          value as number,
+        ]);
+
+        setData(rst);
       },
     });
   };
 
   return (
     <>
-      <main className="flex min-h-screen flex-col items-center justify-center p-36">
+      <main className="flex min-h-screen flex-col items-center justify-center">
         <h1 className="mb-4 text-4xl font-extrabold leading-none tracking-tight md:text-5xl lg:text-6xl">
-          Kaggle Scoreboard
+          Kaggle Leaderboard
         </h1>
         <br />
-        <div className="w-full">
+        <div className="container">
           <Leaderboard scores={data} />
         </div>
         <br />

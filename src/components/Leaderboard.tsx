@@ -1,14 +1,13 @@
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
-import histogram from "highcharts/modules/histogram-bellcurve";
 import React from "react";
 
-if (typeof Highcharts === "object") {
-  histogram(Highcharts); // Execute the bell curve module
-}
+// if (typeof Highcharts === "object") {
+//   histogram(Highcharts); // Execute the bell curve module
+// }
 
 type LeaderboardProps = {
-  scores: number[];
+  scores: number[][]; // [score, count]
 };
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ scores }) => {
@@ -16,41 +15,27 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ scores }) => {
     <HighchartsReact
       highcharts={Highcharts}
       options={{
-        title: { text: "Score Distribution" },
+        chart: { type: "column", zoomType: "x" },
+        title: { text: null },
         legend: { enabled: false },
-        xAxis: [
-          {
-            title: { text: "Score" },
-          },
-        ],
-        yAxis: [
-          {
-            title: { text: "Entries" },
-          },
-        ],
-        navigator: {
-          enabled: true,
-        },
-        rangeSelector: {
-          enabled: true,
-        },
+        xAxis: [{ title: { text: "Score" } }],
+        yAxis: [{ title: { text: "Entries" } }],
         tooltip: {
-          headerFormat: "",
+          headerFormat: null,
           pointFormat: "Score: {point.x}",
+        },
+        plotOptions: {
+          column: {
+            pointPadding: 0.2,
+            borderWidth: 0,
+            groupPadding: 0,
+            shadow: false,
+          },
         },
         series: [
           {
             name: "score",
-            type: "histogram",
-            baseSeries: "score",
-            zIndex: -1,
-          },
-          {
-            id: "score",
-            type: "scatter",
             data: scores,
-            visible: false,
-            turboThreshold: 0,
           },
         ],
       }}
