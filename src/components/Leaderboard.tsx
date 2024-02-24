@@ -59,6 +59,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ scores }) => {
           column: {
             pointPadding: 0.2,
             borderWidth: 0,
+            borderRadius: 20,
             groupPadding: 0,
             shadow: false,
           },

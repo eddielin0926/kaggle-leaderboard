@@ -1,8 +1,11 @@
 "use client";
 
 import Leaderboard from "@/components/Leaderboard";
+import LoadingIcon from "@/components/LoadingIcon";
+import axios from "axios";
+import JSZip from "jszip";
 import Papa, { ParseResult } from "papaparse";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Record = {
   Rank: string;
@@ -16,6 +19,8 @@ type Record = {
 
 export default function Home() {
   const [data, setData] = useState<number[][]>([]);
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Generate an 2d array of bell curve data
@@ -30,35 +35,57 @@ export default function Home() {
     setData(data);
   }, []);
 
-  const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files) return;
-    Papa.parse(event.target.files[0], {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result: ParseResult<Record>) => {
-        const csvValues: string[] = [];
+  const onClick = async () => {
+    setLoading(true);
 
-        result.data.map((d) => {
-          csvValues.push(d.Score);
-        });
+    axios({
+      url: url,
+      method: "GET",
+      responseType: "arraybuffer",
+    })
+      .then((res) => {
+        JSZip.loadAsync(res.data)
+          .then((zip) => {
+            const filename = Object.keys(zip.files)[0];
+            return zip.file(filename)?.async("string");
+          })
+          .then((text) => {
+            if (!text) return;
 
-        // csvalues is string array of numbers. ex ["0.1", "0.2", "0.3", ...]
-        // count the frequency of each score in bin of 0.0001
-        const freq: any = {};
-        csvValues.forEach((e) => {
-          const key = Math.round((Number(e) + Number.EPSILON) * 10000) / 10000;
-          freq[key] = (freq[key] || 0) + 1;
-        });
+            Papa.parse(text, {
+              header: true,
+              skipEmptyLines: true,
+              complete: (result: ParseResult<Record>) => {
+                setData(calcFrequency(result.data));
+                setLoading(false);
+              },
+            });
+          });
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  };
 
-        // convert the frequency object to 2d array
-        const rst: number[][] = Object.entries(freq).map(([key, value]) => [
-          Number(key),
-          value as number,
-        ]);
+  const calcFrequency = (data: Record[]) => {
+    const csvValues = data.map((d) => d.Score);
 
-        setData(rst);
-      },
+    // csvalues is string array of numbers. ex ["0.1", "0.2", "0.3", ...]
+    // count the frequency of each score in bin of 0.0001
+    const freq: any = {};
+    csvValues.forEach((e) => {
+      const key = Math.round((Number(e) + Number.EPSILON) * 10000) / 10000;
+      freq[key] = (freq[key] || 0) + 1;
     });
+
+    // convert the frequency object to 2d array
+    const rst: number[][] = Object.entries(freq).map(([key, value]) => [
+      Number(key),
+      value as number,
+    ]);
+
+    return rst;
   };
 
   return (
@@ -73,12 +100,20 @@ export default function Home() {
         </div>
         <br />
         <input
-          type="file"
-          name="file"
-          accept=".csv"
-          onChange={handleFile}
-          style={{ display: "block", margin: "10px auto" }}
+          type="text"
+          name="url"
+          id="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Copy and paste Kaggle leaderboard raw data URL"
+          className="w-1/2 p-2 m-2 border-2 border-gray-200 rounded-md"
         />
+        <div className="flex items-center">
+          <button onClick={onClick} className="m-2">
+            FETCH
+          </button>
+          {loading && <LoadingIcon />}
+        </div>
       </main>
     </>
   );
