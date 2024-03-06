@@ -38,11 +38,10 @@ export default function Home() {
   const onClick = async () => {
     setLoading(true);
 
-    axios({
-      url: url,
-      method: "GET",
-      responseType: "arraybuffer",
-    })
+    axios
+      .get(`https://cors-anywhere.herokuapp.com/${url}`, {
+        responseType: "arraybuffer",
+      })
       .then((res) => {
         JSZip.loadAsync(res.data)
           .then((zip) => {
